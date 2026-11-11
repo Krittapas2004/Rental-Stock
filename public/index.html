@@ -13,22 +13,43 @@
   <h1><span>👗🎒</span> RentWear</h1>
   <p id="authIntro" class="text-muted">Sign in to your rental management portal.</p>
   
-  <label id="shopWrap" class="hidden">Rental Business / Shop Name
-    <input id="shop" placeholder="e.g. Silk & Gear Rentals" autocomplete="organization">
-  </label>
-  <label>Email Address
-    <input id="email" type="email" placeholder="you@example.com" autocomplete="username">
-  </label>
-  <label>Password
-    <input id="pw" type="password" placeholder="••••••••" autocomplete="current-password">
-  </label>
-  
-  <p id="loginErr" style="color:var(--danger);min-height:1.2em;margin-top:0.75rem;font-size:13px;font-weight:500"></p>
-  
-  <button class="primary" id="loginBtn">Sign in</button>
-  <p style="text-align:center;margin-top:1.25rem;font-size:13px">
-    <button id="modeBtn" style="border:0;background:none;color:var(--primary);text-decoration:underline;padding:0">Create a new rental shop account</button>
-  </p>
+  <!-- Login / Register Form -->
+  <div id="loginForm">
+    <label id="shopWrap" class="hidden">Rental Business / Shop Name
+      <input id="shop" placeholder="e.g. Silk &amp; Gear Rentals" autocomplete="organization">
+    </label>
+    <label>Email Address
+      <input id="email" type="email" placeholder="you@example.com" autocomplete="username">
+    </label>
+    <label>Password
+      <input id="pw" type="password" placeholder="••••••••" autocomplete="current-password">
+    </label>
+    
+    <p id="loginErr" style="color:var(--danger);min-height:1.2em;margin-top:0.75rem;font-size:13px;font-weight:500"></p>
+    
+    <button class="primary" id="loginBtn">Sign in</button>
+    <p style="text-align:center;margin-top:0.75rem;font-size:13px">
+      <button id="forgotPwBtn" type="button" style="border:0;background:none;color:var(--muted);text-decoration:underline;padding:0;cursor:pointer">Forgot password?</button>
+    </p>
+    <p style="text-align:center;margin-top:0.5rem;font-size:13px">
+      <button id="modeBtn" style="border:0;background:none;color:var(--primary);text-decoration:underline;padding:0">Create a new rental shop account</button>
+    </p>
+  </div>
+
+  <!-- Forgot Password Form -->
+  <div id="forgotPwForm" class="hidden">
+    <label>Enter your account email address
+      <input id="forgotEmail" type="email" placeholder="you@example.com" autocomplete="username">
+    </label>
+    
+    <p id="forgotErr" style="color:var(--danger);min-height:1.2em;margin-top:0.75rem;font-size:13px;font-weight:500"></p>
+    <p id="forgotSuccess" class="hidden" style="color:var(--primary);min-height:1.2em;margin-top:0.75rem;font-size:13px;font-weight:500"></p>
+    
+    <button class="primary" id="sendResetBtn">Send Reset Link</button>
+    <p style="text-align:center;margin-top:1rem;font-size:13px">
+      <button id="backToLoginBtn" type="button" style="border:0;background:none;color:var(--primary);text-decoration:underline;padding:0;cursor:pointer">← Back to Sign In</button>
+    </p>
+  </div>
 </section>
 
 <!-- MAIN APP VIEW -->

@@ -3,6 +3,7 @@ const Database = require('better-sqlite3');
 const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
+const nodemailer = require('nodemailer');
 
 const { PORT = 3000, ALLOW_SIGNUP = 'true', DATA_DIR = path.join(__dirname, '..') } = process.env;
 const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
@@ -85,9 +86,19 @@ CREATE TABLE IF NOT EXISTS rentals (
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS password_resets (
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  token_hash TEXT UNIQUE NOT NULL,
+  expires INTEGER NOT NULL,
+  used INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_items_user ON items(user_id, active);
 CREATE INDEX IF NOT EXISTS idx_rentals_user ON rentals(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_rentals_dates ON rentals(item_id, start_date, return_date, status);
+CREATE INDEX IF NOT EXISTS idx_pw_resets_token ON password_resets(token_hash);
 `);
 
 // Migrate existing columns if tables were created previously
@@ -97,6 +108,33 @@ if (!userCols.includes('rental_terms')) db.exec("ALTER TABLE users ADD COLUMN re
 
 // Clean expired sessions
 db.prepare('DELETE FROM sessions WHERE expires < ?').run(Date.now());
+
+// Clean expired/used password reset tokens
+db.prepare('DELETE FROM password_resets WHERE expires < ? OR used = 1').run(Date.now());
+
+// Email transport for password reset
+const smtpHost = process.env.SMTP_HOST || '';
+const smtpPort = Number(process.env.SMTP_PORT) || 587;
+const smtpUser = process.env.SMTP_USER || '';
+const smtpPass = process.env.SMTP_PASS || '';
+const smtpFrom = process.env.SMTP_FROM || smtpUser;
+
+let mailTransport = null;
+if (smtpHost && smtpUser && smtpPass) {
+    mailTransport = nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpPort === 465,
+        auth: { user: smtpUser, pass: smtpPass }
+    });
+    mailTransport.verify().then(() => {
+        console.log('✅ Email transport ready');
+    }).catch(err => {
+        console.warn('⚠️  Email transport failed to verify:', err.message);
+    });
+} else {
+    console.warn('⚠️  SMTP not configured — password reset emails will be logged to console instead.');
+}
 
 // Seed default rental items for a user if they have none
 const seedRentalItems = db.transaction((userId) => {
@@ -237,6 +275,103 @@ app.post('/api/login', limiter, (req, res) => {
     // Seed if empty
     seedRentalItems(u.id);
     res.json({ token: newSession(u.id) });
+});
+
+// --- FORGOT PASSWORD ---
+app.post('/api/forgot-password', limiter, async (req, res) => {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+        return res.status(400).json({ error: 'Enter a valid email address' });
+    }
+
+    // Always respond success (don't reveal if email exists)
+    const u = db.prepare('SELECT id, email, shop_name FROM users WHERE email=?').get(email);
+    if (!u) {
+        return res.json({ ok: true, message: 'If that email is registered, a reset link has been sent.' });
+    }
+
+    // Rate-limit: max 3 active reset tokens per user
+    const activeResets = db.prepare('SELECT COUNT(*) as c FROM password_resets WHERE user_id=? AND expires > ? AND used=0').get(u.id, Date.now());
+    if (activeResets.c >= 3) {
+        return res.json({ ok: true, message: 'If that email is registered, a reset link has been sent.' });
+    }
+
+    // Generate a secure reset token (valid for 1 hour)
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = sha(rawToken);
+    const expires = Date.now() + 60 * 60 * 1000; // 1 hour
+
+    db.prepare('INSERT INTO password_resets (user_id, token_hash, expires) VALUES (?, ?, ?)').run(u.id, tokenHash, expires);
+
+    const resetUrl = `${BASE_URL}/reset-password.html?token=${rawToken}`;
+
+    // Build the email
+    const emailHtml = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px;">
+            <h2 style="color: #059669; margin-bottom: 8px;">👗🎒 RentWear</h2>
+            <p>Hi <strong>${u.shop_name}</strong>,</p>
+            <p>We received a request to reset the password for your account (<strong>${u.email}</strong>).</p>
+            <p>Click the button below to set a new password. This link expires in <strong>1 hour</strong>.</p>
+            <div style="text-align: center; margin: 28px 0;">
+                <a href="${resetUrl}" style="display: inline-block; background: #059669; color: #fff; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 15px;">
+                    Reset My Password
+                </a>
+            </div>
+            <p style="font-size: 13px; color: #64748b;">If you didn't request this, you can safely ignore this email. Your password won't change.</p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+            <p style="font-size: 12px; color: #94a3b8;">If the button doesn't work, copy and paste this link:<br>
+            <a href="${resetUrl}" style="color: #059669; word-break: break-all;">${resetUrl}</a></p>
+        </div>
+    `;
+
+    try {
+        if (mailTransport) {
+            await mailTransport.sendMail({
+                from: `"RentWear" <${smtpFrom}>`,
+                to: u.email,
+                subject: 'Reset your RentWear password',
+                html: emailHtml
+            });
+            console.log(`Password reset email sent to ${u.email}`);
+        } else {
+            // Fallback: log to console when SMTP is not configured
+            console.log('\n═══════════════════════════════════════════');
+            console.log('📧 PASSWORD RESET (no SMTP configured)');
+            console.log(`   Email: ${u.email}`);
+            console.log(`   Reset URL: ${resetUrl}`);
+            console.log('═══════════════════════════════════════════\n');
+        }
+    } catch (err) {
+        console.error('Failed to send reset email:', err.message);
+    }
+
+    res.json({ ok: true, message: 'If that email is registered, a reset link has been sent.' });
+});
+
+// --- RESET PASSWORD (verify token & set new password) ---
+app.post('/api/reset-password', limiter, (req, res) => {
+    const token = String(req.body.token || '').trim();
+    const newPassword = String(req.body.password || '');
+
+    if (!token) return res.status(400).json({ error: 'Reset token is missing' });
+    if (newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+
+    const tokenHash = sha(token);
+    const resetRecord = db.prepare('SELECT * FROM password_resets WHERE token_hash=? AND used=0 AND expires > ?').get(tokenHash, Date.now());
+
+    if (!resetRecord) {
+        return res.status(400).json({ error: 'This reset link is invalid or has expired. Please request a new one.' });
+    }
+
+    // Update the password and mark token as used
+    db.transaction(() => {
+        db.prepare('UPDATE users SET pass=? WHERE id=?').run(hashPw(newPassword), resetRecord.user_id);
+        db.prepare('UPDATE password_resets SET used=1 WHERE id=?').run(resetRecord.id);
+        // Invalidate all existing sessions (force re-login with new password)
+        db.prepare('DELETE FROM sessions WHERE user_id=?').run(resetRecord.user_id);
+    })();
+
+    res.json({ ok: true, message: 'Password has been reset! You can now sign in.' });
 });
 
 // Auth middleware for all following /api routes

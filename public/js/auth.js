@@ -10,6 +10,12 @@ const Auth = {
       if (el) el.onkeydown = e => { if (e.key === 'Enter') this.login(); };
     });
 
+    // Forgot password handlers
+    $('#forgotPwBtn').onclick = () => this.showForgotPassword();
+    $('#backToLoginBtn').onclick = () => this.hideForgotPassword();
+    $('#sendResetBtn').onclick = () => this.sendResetLink();
+    $('#forgotEmail').onkeydown = e => { if (e.key === 'Enter') this.sendResetLink(); };
+
     $('#logout').onclick = async () => {
       try { await API.request('/logout', { method: 'POST' }); } catch {}
       this.lock();
@@ -25,6 +31,68 @@ const Auth = {
     $('#authIntro').textContent = isSignup
       ? 'Set up your rental business. Your clothes, gear, and customer bookings remain private to you.'
       : 'Sign in to your rental management portal.';
+    // Hide forgot password link in signup mode
+    const forgotBtn = $('#forgotPwBtn');
+    if (forgotBtn) forgotBtn.parentElement.style.display = isSignup ? 'none' : '';
+  },
+
+  showForgotPassword() {
+    $('#loginForm').classList.add('hidden');
+    $('#forgotPwForm').classList.remove('hidden');
+    $('#authIntro').textContent = 'Enter the email address you used to sign up, and we\'ll send you a link to reset your password.';
+    $('#forgotErr').textContent = '';
+    $('#forgotSuccess').textContent = '';
+    $('#forgotSuccess').classList.add('hidden');
+    $('#forgotEmail').value = $('#email').value || '';
+    $('#forgotEmail').focus();
+  },
+
+  hideForgotPassword() {
+    $('#forgotPwForm').classList.add('hidden');
+    $('#loginForm').classList.remove('hidden');
+    $('#authIntro').textContent = this.signup
+      ? 'Set up your rental business. Your clothes, gear, and customer bookings remain private to you.'
+      : 'Sign in to your rental management portal.';
+    $('#email').focus();
+  },
+
+  async sendResetLink() {
+    try {
+      $('#forgotErr').textContent = '';
+      $('#forgotSuccess').textContent = '';
+      $('#forgotSuccess').classList.add('hidden');
+      const email = $('#forgotEmail').value.trim();
+
+      if (!email) {
+        throw new Error('Please enter your email address.');
+      }
+
+      $('#sendResetBtn').disabled = true;
+      $('#sendResetBtn').textContent = 'Sending...';
+
+      const res = await fetch('/api/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Request failed');
+
+      $('#forgotSuccess').textContent = data.message || 'If that email is registered, a reset link has been sent. Check your inbox (and spam folder).';
+      $('#forgotSuccess').classList.remove('hidden');
+      $('#sendResetBtn').textContent = '✓ Sent!';
+
+      // Re-enable after 30 seconds
+      setTimeout(() => {
+        $('#sendResetBtn').disabled = false;
+        $('#sendResetBtn').textContent = 'Send Reset Link';
+      }, 30000);
+
+    } catch (err) {
+      $('#forgotErr').textContent = err.message;
+      $('#sendResetBtn').disabled = false;
+      $('#sendResetBtn').textContent = 'Send Reset Link';
+    }
   },
 
   async login() {
@@ -65,6 +133,9 @@ const Auth = {
     localStorage.removeItem('token');
     $('#app').classList.add('hidden');
     $('#login').classList.remove('hidden');
+    // Reset to login form (not forgot password)
+    $('#loginForm').classList.remove('hidden');
+    $('#forgotPwForm').classList.add('hidden');
     $('#pw').value = '';
     $('#email').focus();
   }
