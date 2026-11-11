@@ -100,6 +100,12 @@ const calculateDays = (start, ret) => {
 // Category Icon Mapper
 const getCategoryIcon = cat => {
   const map = {
+    'Golf': '⛳',
+    'Dress': '👗',
+    'Shirt': '👔',
+    'Tennis': '🎾',
+    'Skirt': '💃',
+    'Pant': '👖',
     'Dresses': '👗',
     'Suits & Formal': '🤵',
     'Camping & Outdoor': '⛺',
@@ -108,5 +114,5 @@ const getCategoryIcon = cat => {
     'Accessories': '🎒',
     'Other': '📦'
   };
-  return map[cat] || '📦';
+  return map[cat] || '🏷️';
 };

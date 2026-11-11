@@ -74,7 +74,7 @@ async function initDB() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
       name TEXT NOT NULL,
-      category TEXT NOT NULL DEFAULT 'Dresses',
+      category TEXT NOT NULL DEFAULT 'Golf',
       size TEXT DEFAULT '',
       price_per_day INTEGER NOT NULL,
       deposit INTEGER DEFAULT 0,
@@ -470,7 +470,7 @@ async function calculateItemAvailability(userId, startDate, returnDate) {
 // --- ITEM ROUTES ---
 const cleanItem = b => ({
     name: String(b.name || '').trim(),
-    category: String(b.category || 'Dresses').trim() || 'Dresses',
+    category: String(b.category || 'Golf').trim() || 'Golf',
     size: String(b.size || '').trim(),
     price_per_day: Math.round(Number(b.price_per_day)),
     deposit: Math.round(Number(b.deposit || 0)),
