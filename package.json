@@ -2,10 +2,14 @@
   "name": "rental-website",
   "version": "1.0.0",
   "private": true,
-  "scripts": { "start": "node src/server.js" },
-  "engines": { "node": "20.18.0" },
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "engines": {
+    "node": "20.18.0"
+  },
   "dependencies": {
-    "better-sqlite3": "^11.3.0",
+    "@libsql/client": "^0.18.0",
     "express": "^4.19.2",
     "nodemailer": "^6.9.16",
     "stripe": "^16.12.0"
