@@ -187,6 +187,9 @@ app.disable('x-powered-by');
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, '../public')));
 
+// Health check for hosting platforms (Render, Railway, etc.)
+app.get('/healthz', (_req, res) => res.json({ status: 'ok' }));
+
 // Basic rate limiter
 const hits = new Map();
 setInterval(() => {
@@ -586,6 +589,11 @@ app.get('/api/dashboard', (req, res) => {
         upcoming: upcoming,
         today: todayStr
     });
+});
+
+// Serve the main index.html for any non-API, non-static route (SPA fallback)
+app.get('*', (_req, res) => {
+    res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
 app.listen(PORT, () => console.log(`Rental System running at ${BASE_URL} (sign-ups: ${ALLOW_SIGNUP === 'true' ? 'open' : 'closed'})`));
