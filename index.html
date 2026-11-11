@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RentWear — Gear & Apparel Rental</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<!-- AUTH / LOGIN VIEW -->
+<section id="login" class="hidden">
+  <h1><span>👗🎒</span> RentWear</h1>
+  <p id="authIntro" class="text-muted">Sign in to your rental management portal.</p>
+  
+  <label id="shopWrap" class="hidden">Rental Business / Shop Name
+    <input id="shop" placeholder="e.g. Silk & Gear Rentals" autocomplete="organization">
+  </label>
+  <label>Email Address
+    <input id="email" type="email" placeholder="you@example.com" autocomplete="username">
+  </label>
+  <label>Password
+    <input id="pw" type="password" placeholder="••••••••" autocomplete="current-password">
+  </label>
+  
+  <p id="loginErr" style="color:var(--danger);min-height:1.2em;margin-top:0.75rem;font-size:13px;font-weight:500"></p>
+  
+  <button class="primary" id="loginBtn">Sign in</button>
+  <p style="text-align:center;margin-top:1.25rem;font-size:13px">
+    <button id="modeBtn" style="border:0;background:none;color:var(--primary);text-decoration:underline;padding:0">Create a new rental shop account</button>
+  </p>
+</section>
+
+<!-- MAIN APP VIEW -->
+<div id="app" class="hidden">
+  <!-- TOP HEADER -->
+  <header>
+    <div class="brand">
+      <span class="brand-icon">👗🎒</span>
+      <div>
+        <div class="brand-name" id="headerShopName">RentWear</div>
+        <span class="brand-sub">Gear & Apparel Rental System</span>
+      </div>
+    </div>
+    
+    <nav>
+      <button data-tab="availability" aria-current="true">🔍 Availability</button>
+      <button data-tab="rentals">📅 Rentals & Schedule</button>
+      <button data-tab="inventory">👗 Wardrobe & Gear</button>
+      <button data-tab="settings">⚙️ Settings</button>
+    </nav>
+    
+    <div class="header-actions">
+      <button class="primary" id="openNewRentalBtn"><span>➕</span> New Rental</button>
+      <button id="logout" title="Lock session">Lock</button>
+    </div>
+  </header>
+
+  <!-- TAB 1: AVAILABILITY CHECKER -->
+  <main id="availability" class="page">
+    <!-- Top KPI Ribbon -->
+    <div class="kpi-bar">
+      <div class="kpi-card">
+        <div class="kpi-icon">👗</div>
+        <div class="kpi-body">
+          <div class="kpi-num num" id="kpiTotalItems">—</div>
+          <div class="kpi-label">Total Rental Items</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon">⏳</div>
+        <div class="kpi-body">
+          <div class="kpi-num num" id="kpiCurrentlyOut">—</div>
+          <div class="kpi-label">Currently Out with Customers</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon">⏰</div>
+        <div class="kpi-body">
+          <div class="kpi-num num text-warning" id="kpiDueToday">—</div>
+          <div class="kpi-label">Due Back Today</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon">⚠️</div>
+        <div class="kpi-body">
+          <div class="kpi-num num text-danger" id="kpiOverdue">—</div>
+          <div class="kpi-label">Overdue Items</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-header">
+      <div class="page-title">
+        <h2>Check Gear & Dress Availability</h2>
+        <p>Pick rental start and return dates to immediately see what is available or rented out.</p>
+      </div>
+    </div>
+
+    <!-- Date Range Picker Card -->
+    <div class="avail-picker-card">
+      <div class="avail-inputs-row">
+        <div class="avail-field">
+          <label for="availStartDate">Rental Start Date (Pick-up)</label>
+          <input type="date" id="availStartDate">
+        </div>
+        <div class="avail-field">
+          <label for="availReturnDate">Return Date (Drop-off)</label>
+          <input type="date" id="availReturnDate">
+        </div>
+        <div class="avail-field">
+          <button class="primary" id="availCheckBtn" style="padding:0.55rem 1.25rem">Check Availability</button>
+        </div>
+      </div>
+
+      <div class="date-preset-pills">
+        <span>Quick Dates:</span>
+        <button class="preset-pill" data-preset="today">Today Only</button>
+        <button class="preset-pill" data-preset="weekend">This Weekend</button>
+        <button class="preset-pill" data-preset="3days">Next 3 Days</button>
+        <button class="preset-pill" data-preset="5days">Next 5 Days</button>
+        <button class="preset-pill" data-preset="nextweek">Next Week</button>
+      </div>
+    </div>
+
+    <!-- Summary Banner -->
+    <div id="availSummaryBanner" class="avail-summary-banner">
+      <div id="availSummaryText">Select dates above to check live availability.</div>
+      <div class="filter-group">
+        <button class="filter-btn active" data-avfilter="all">All Items</button>
+        <button class="filter-btn" data-avfilter="available">🟢 Available Only</button>
+        <button class="filter-btn" data-avfilter="rented">🔴 Rented Out</button>
+      </div>
+    </div>
+
+    <!-- Filter & Search Controls -->
+    <div class="controls-bar">
+      <div class="filter-group" id="availCategoryFilters">
+        <!-- Rendered dynamically -->
+      </div>
+      <div class="search-box">
+        <input type="text" id="availSearch" placeholder="Search dress, size, gear...">
+      </div>
+    </div>
+
+    <!-- Availability Cards Grid -->
+    <div id="availGrid" class="cards-grid">
+      <!-- Rendered dynamically -->
+    </div>
+  </main>
+
+  <!-- TAB 2: RENTALS & SCHEDULE -->
+  <main id="rentals" class="page hidden">
+    <div class="page-header">
+      <div class="page-title">
+        <h2>Rentals & Bookings Schedule</h2>
+        <p>Monitor active rentals, track return dates, process check-ins, and print rental slips.</p>
+      </div>
+      <button class="primary" id="newRentalFromRentalsBtn"><span>➕</span> Book New Rental</button>
+    </div>
+
+    <div class="controls-bar">
+      <div class="filter-group" id="rentalFilterButtons">
+        <button class="filter-btn active" data-rfilter="all">All Bookings</button>
+        <button class="filter-btn" data-rfilter="active">🟢 Currently Out</button>
+        <button class="filter-btn" data-rfilter="due_today">⏰ Due Today</button>
+        <button class="filter-btn" data-rfilter="overdue">⚠️ Overdue</button>
+        <button class="filter-btn" data-rfilter="reserved">🗓️ Reserved</button>
+        <button class="filter-btn" data-rfilter="returned">✓ Returned</button>
+      </div>
+      <div class="search-box">
+        <input type="text" id="rentalSearch" placeholder="Search customer, phone, item...">
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Item & Size</th>
+            <th>Customer</th>
+            <th>Rental Dates</th>
+            <th>Duration</th>
+            <th>Daily Rate</th>
+            <th>Total Fee</th>
+            <th>Deposit</th>
+            <th>Status</th>
+            <th style="text-align:right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="rentalRows">
+          <!-- Rendered dynamically -->
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- TAB 3: WARDROBE & GEAR INVENTORY -->
+  <main id="inventory" class="page hidden">
+    <div class="page-header">
+      <div class="page-title">
+        <h2>Wardrobe & Gear Inventory</h2>
+        <p>Add and manage your clothing, dresses, camping gear, and accessories.</p>
+      </div>
+      <button class="primary" id="addNewItemBtn"><span>➕</span> Add New Item</button>
+    </div>
+
+    <div class="controls-bar">
+      <div class="filter-group" id="invCategoryFilters">
+        <!-- Rendered dynamically -->
+      </div>
+      <div class="search-box">
+        <input type="text" id="invSearch" placeholder="Search inventory...">
+      </div>
+    </div>
+
+    <div id="invGrid" class="cards-grid">
+      <!-- Rendered dynamically -->
+    </div>
+  </main>
+
+  <!-- TAB 4: SETTINGS -->
+  <main id="settings" class="page hidden">
+    <div class="page-header">
+      <div class="page-title">
+        <h2>Rental Store Settings</h2>
+        <p id="acctUserEmail" class="text-muted"></p>
+      </div>
+    </div>
+
+    <div style="background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:1.5rem;max-width:640px;box-shadow:var(--shadow-sm)">
+      <div class="form-grid">
+        <div class="field form-full">
+          <label for="sShop">Store / Rental Studio Name</label>
+          <input id="sShop" placeholder="e.g. Elite Dress & Gear Rentals">
+        </div>
+        <div class="field">
+          <label for="sPhone">Contact Phone Number</label>
+          <input id="sPhone" placeholder="e.g. 081-234-5678">
+        </div>
+        <div class="field">
+          <label for="sCur">Store Currency</label>
+          <select id="sCur"></select>
+        </div>
+        <div class="field form-full">
+          <label for="sAddr">Shop Address (Shown on rental slips)</label>
+          <input id="sAddr" placeholder="123 Sukhumvit Rd, Bangkok, Thailand">
+        </div>
+        <div class="field form-full">
+          <label for="sTerms">Default Rental Terms & Late Policy</label>
+          <textarea id="sTerms" rows="4" placeholder="e.g. Security deposit refunded upon undamaged return. Dry cleaning included. Late returns charged 500 THB/day."></textarea>
+        </div>
+        <div class="form-full" style="margin-top:0.75rem">
+          <button class="primary" id="sSave" style="padding:0.65rem 1.5rem">Save Store Settings</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL 1: NEW RENTAL BOOKING -->
+<dialog id="rentalDlg">
+  <div class="dlg-header">
+    <h3 id="rentalDlgTitle">New Rental Booking</h3>
+    <button class="dlg-close" id="closeRentalDlg">&times;</button>
+  </div>
+  <div class="dlg-body">
+    <div class="form-grid">
+      <div class="field form-full">
+        <label for="rItemSelect">Select Gear or Dress *</label>
+        <select id="rItemSelect"></select>
+      </div>
+
+      <!-- Real-time availability warning/banner inside booking modal -->
+      <div id="rAvailWarning" class="form-full" style="display:none"></div>
+
+      <div class="field">
+        <label for="rStartDate">Rental Date (Pick-up) *</label>
+        <input type="date" id="rStartDate">
+      </div>
+      <div class="field">
+        <label for="rReturnDate">Return Date (Drop-off) *</label>
+        <input type="date" id="rReturnDate">
+      </div>
+
+      <div class="field">
+        <label for="rCustomerName">Customer Full Name *</label>
+        <input id="rCustomerName" placeholder="e.g. Emma Watson" autocomplete="name">
+      </div>
+      <div class="field">
+        <label for="rCustomerPhone">Customer Phone Number *</label>
+        <input id="rCustomerPhone" type="tel" placeholder="e.g. 081-234-5678" autocomplete="tel">
+      </div>
+
+      <div class="field">
+        <label for="rCustomerEmail">Customer Email / ID (Optional)</label>
+        <input id="rCustomerEmail" type="email" placeholder="customer@example.com">
+      </div>
+      <div class="field">
+        <label for="rQty">Quantity (Units)</label>
+        <input type="number" id="rQty" min="1" value="1">
+      </div>
+
+      <!-- Calculation Box -->
+      <div class="form-full calc-box">
+        <div class="calc-row">
+          <span>Rental Duration:</span>
+          <b id="rCalcDays">1 day</b>
+        </div>
+        <div class="calc-row">
+          <span>Rate per Day:</span>
+          <span id="rCalcRate" class="num">—</span>
+        </div>
+        <div class="calc-row">
+          <span>Security Deposit (refundable):</span>
+          <span id="rCalcDeposit" class="num">—</span>
+        </div>
+        <div class="calc-row grand">
+          <span>Total Rental Fee:</span>
+          <span id="rCalcTotal" class="num">—</span>
+        </div>
+      </div>
+
+      <div class="field form-full">
+        <label for="rNotes">Rental Notes / Sizing adjustments / Condition</label>
+        <input id="rNotes" placeholder="e.g. Event in Hua Hin, dry cleaning included">
+      </div>
+    </div>
+  </div>
+  <div class="dlg-footer">
+    <button id="cancelRentalBtn">Cancel</button>
+    <button class="primary" id="submitRentalBtn">Confirm & Book Rental</button>
+  </div>
+</dialog>
+
+<!-- MODAL 2: ADD / EDIT ITEM (INVENTORY) -->
+<dialog id="itemDlg">
+  <div class="dlg-header">
+    <h3 id="itemDlgTitle">Add Rental Item</h3>
+    <button class="dlg-close" id="closeItemDlg">&times;</button>
+  </div>
+  <div class="dlg-body">
+    <input type="hidden" id="itemId">
+    <div class="form-grid">
+      <div class="field form-full">
+        <label for="itemName">Item Name *</label>
+        <input id="itemName" placeholder="e.g. Emerald Silk Evening Gown">
+      </div>
+
+      <div class="field">
+        <label for="itemCategory">Category *</label>
+        <select id="itemCategory">
+          <option value="Dresses">Dresses & Gowns</option>
+          <option value="Suits & Formal">Suits & Formal Wear</option>
+          <option value="Camping & Outdoor">Camping & Outdoor Gear</option>
+          <option value="Camera & Tech">Camera & Tech Gear</option>
+          <option value="Costumes & Themed">Costumes & Themed</option>
+          <option value="Accessories">Accessories & Bags</option>
+          <option value="Other">Other Gear</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="itemSize">Size / Specifications</label>
+        <input id="itemSize" placeholder="e.g. Size M (US 6), 4-Person, 65L">
+      </div>
+
+      <div class="field">
+        <label for="itemDailyRate">Rental Rate / Day *</label>
+        <input type="number" id="itemDailyRate" min="0" step="0.01" placeholder="e.g. 850.00">
+      </div>
+      <div class="field">
+        <label for="itemDeposit">Security Deposit</label>
+        <input type="number" id="itemDeposit" min="0" step="0.01" placeholder="e.g. 1000.00">
+      </div>
+
+      <div class="field">
+        <label for="itemStock">Total Stock / Units Available *</label>
+        <input type="number" id="itemStock" min="1" value="1">
+      </div>
+
+      <!-- Photo Upload -->
+      <div class="field form-full">
+        <label>Item Photo (Upload or Image Link)</label>
+        <div class="img-upload-field">
+          <img id="itemImgPreview" class="img-upload-preview" src="" style="display:none" alt="Preview">
+          <div style="flex:1">
+            <input type="file" id="itemImgFile" accept="image/*" style="margin-bottom:0.4rem;font-size:12px">
+            <input id="itemImgUrl" placeholder="Or paste image URL (https://...)" style="font-size:13px">
+          </div>
+        </div>
+      </div>
+
+      <div class="field form-full">
+        <label for="itemDesc">Description & Care Instructions</label>
+        <textarea id="itemDesc" rows="3" placeholder="Fabric, condition notes, care instructions..."></textarea>
+      </div>
+    </div>
+  </div>
+  <div class="dlg-footer">
+    <button id="cancelItemBtn">Cancel</button>
+    <button class="primary" id="submitItemBtn">Save Item</button>
+  </div>
+</dialog>
+
+<!-- MODAL 3: RETURN ITEM CONFIRMATION -->
+<dialog id="returnConfirmDlg">
+  <div class="dlg-header">
+    <h3>Process Item Return</h3>
+    <button class="dlg-close" id="closeReturnConfirmDlg">&times;</button>
+  </div>
+  <div class="dlg-body">
+    <p style="font-size:15px;margin-bottom:1rem">Confirm checking in this rental back into inventory?</p>
+    <div style="background:var(--bg);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1rem">
+      <div class="calc-row"><span>Item:</span> <b id="retConfirmItemName">—</b></div>
+      <div class="calc-row"><span>Customer:</span> <b id="retConfirmCustomer">—</b></div>
+      <div class="calc-row"><span>Due Date:</span> <span id="retConfirmDueDate">—</span></div>
+      <div class="calc-row"><span>Security Deposit to refund:</span> <b id="retConfirmDeposit" class="num">—</b></div>
+    </div>
+    <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:13.5px">
+      <input type="checkbox" id="retItemChecked" checked style="width:auto"> Item inspected for damage & clean condition
+    </label>
+    <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:13.5px;margin-top:0.4rem">
+      <input type="checkbox" id="retDepositRefunded" checked style="width:auto"> Security deposit returned to customer
+    </label>
+  </div>
+  <div class="dlg-footer">
+    <button id="cancelReturnConfirmBtn">Cancel</button>
+    <button class="primary" id="confirmReturnOkBtn">Confirm Return (Mark Available)</button>
+  </div>
+</dialog>
+
+<!-- MODAL 4: PRINTABLE RENTAL AGREEMENT & SLIP -->
+<dialog id="slipDlg" style="max-width:620px">
+  <div class="dlg-header noprint">
+    <h3>Rental Agreement & Receipt</h3>
+    <button class="dlg-close" id="closeSlipDlg">&times;</button>
+  </div>
+  <div class="dlg-body" style="padding:0">
+    <div id="slipContent" class="rental-slip"></div>
+  </div>
+  <div class="dlg-footer noprint">
+    <button id="closeSlipBtn">Close</button>
+    <button class="primary" id="printSlipBtn"><span>🖨️</span> Print Agreement</button>
+  </div>
+</dialog>
+
+<!-- SCRIPTS -->
+<script src="/js/api.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/availability.js"></script>
+<script src="/js/inventory.js"></script>
+<script src="/js/rentals.js"></script>
+<script src="/js/settings.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>
